@@ -1,0 +1,608 @@
+{
+  "info": {
+    "name": "Healthcare Scheduling System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "auth_url",
+      "value": "http://localhost:3001/graphql"
+    },
+    {
+      "key": "schedule_url",
+      "value": "http://localhost:3002/graphql"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "customer_id",
+      "value": ""
+    },
+    {
+      "key": "doctor_id",
+      "value": ""
+    },
+    {
+      "key": "schedule_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth Service",
+      "item": [
+        {
+          "name": "register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation Register($input: RegisterInput!) {\n  register(input: $input) { id email createdAt }\n}",
+                "variables": "{\n  \"input\": {\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\"\n  }\n}"
+              }
+            },
+            "url": "{{auth_url}}"
+          }
+        },
+        {
+          "name": "login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation Login($input: LoginInput!) {\n  login(input: $input) { accessToken user { id email } }\n}",
+                "variables": "{\n  \"input\": {\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\"\n  }\n}"
+              }
+            },
+            "url": "{{auth_url}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data; if (d) pm.collectionVariables.set('token', d.login.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "validateToken",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query Validate($token: String!) {\n  validateToken(token: $token) { id email }\n}",
+                "variables": "{\n  \"token\": \"{{token}}\"\n}"
+              }
+            },
+            "url": "{{auth_url}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "createCustomer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation($input: CreateCustomerInput!) {\n  createCustomer(input: $input) { id name email }\n}",
+                "variables": "{\n  \"input\": {\n    \"name\": \"Budi Santoso\",\n    \"email\": \"budi@example.com\"\n  }\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data; if (d) pm.collectionVariables.set('customer_id', d.createCustomer.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "updateCustomer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation($input: UpdateCustomerInput!) {\n  updateCustomer(input: $input) { id name email }\n}",
+                "variables": "{\n  \"input\": {\n    \"id\": \"{{customer_id}}\",\n    \"name\": \"Budi S.\"\n  }\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "customers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  customers(page: 1, limit: 10) { total page limit totalPages items { id name email } }\n}",
+                "variables": "{}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query($id: ID!) {\n  customer(id: $id) { id name email }\n}",
+                "variables": "{\n  \"id\": \"{{customer_id}}\"\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "deleteCustomer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation($id: ID!) {\n  deleteCustomer(id: $id) { id }\n}",
+                "variables": "{\n  \"id\": \"{{customer_id}}\"\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Doctors",
+      "item": [
+        {
+          "name": "createDoctor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation($input: CreateDoctorInput!) {\n  createDoctor(input: $input) { id name }\n}",
+                "variables": "{\n  \"input\": {\n    \"name\": \"dr. Siti Rahma\"\n  }\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data; if (d) pm.collectionVariables.set('doctor_id', d.createDoctor.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "updateDoctor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation($input: UpdateDoctorInput!) {\n  updateDoctor(input: $input) { id name }\n}",
+                "variables": "{\n  \"input\": {\n    \"id\": \"{{doctor_id}}\",\n    \"name\": \"dr. Siti Rahma, Sp.PD\"\n  }\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "doctors",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  doctors(page: 1, limit: 10) { total page limit totalPages items { id name } }\n}",
+                "variables": "{}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "doctor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query($id: ID!) {\n  doctor(id: $id) { id name }\n}",
+                "variables": "{\n  \"id\": \"{{doctor_id}}\"\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "deleteDoctor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation($id: ID!) {\n  deleteDoctor(id: $id) { id }\n}",
+                "variables": "{\n  \"id\": \"{{doctor_id}}\"\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedules",
+      "item": [
+        {
+          "name": "createSchedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation($input: CreateScheduleInput!) {\n  createSchedule(input: $input) {\n    id objective scheduledAt\n    customer { id name }\n    doctor { id name }\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"objective\": \"Medical check-up\",\n    \"customerId\": \"{{customer_id}}\",\n    \"doctorId\": \"{{doctor_id}}\",\n    \"scheduledAt\": \"2026-12-01T09:00:00Z\"\n  }\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data; if (d) pm.collectionVariables.set('schedule_id', d.createSchedule.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "createSchedule (same doctor + time -> Conflict)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation($input: CreateScheduleInput!) {\n  createSchedule(input: $input) { id }\n}",
+                "variables": "{\n  \"input\": {\n    \"objective\": \"Should fail\",\n    \"customerId\": \"{{customer_id}}\",\n    \"doctorId\": \"{{doctor_id}}\",\n    \"scheduledAt\": \"2026-12-01T09:00:00Z\"\n  }\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "schedules (filtered)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query($doctorId: ID, $from: DateTime, $to: DateTime) {\n  schedules(page: 1, limit: 10, doctorId: $doctorId, from: $from, to: $to) {\n    total totalPages\n    items { id objective scheduledAt customer { name } doctor { name } }\n  }\n}",
+                "variables": "{\n  \"doctorId\": \"{{doctor_id}}\",\n  \"from\": \"2026-12-01T00:00:00Z\",\n  \"to\": \"2026-12-31T23:59:59Z\"\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query($id: ID!) {\n  schedule(id: $id) { id objective scheduledAt customer { name } doctor { name } }\n}",
+                "variables": "{\n  \"id\": \"{{schedule_id}}\"\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "deleteSchedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation($id: ID!) {\n  deleteSchedule(id: $id) { id }\n}",
+                "variables": "{\n  \"id\": \"{{schedule_id}}\"\n}"
+              }
+            },
+            "url": "{{schedule_url}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+name: healthcare-scheduling
+
+services:
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${AUTH_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD in .env}
+      POSTGRES_DB: ${AUTH_DB_NAME:-auth_db}
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [healthcare-net]
+
+  schedule-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${SCHEDULE_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${SCHEDULE_DB_PASSWORD:?Set SCHEDULE_DB_PASSWORD in .env}
+      POSTGRES_DB: ${SCHEDULE_DB_NAME:-schedule_db}
+    volumes:
+      - schedule-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [healthcare-net]
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://${AUTH_DB_USER:-postgres}:${AUTH_DB_PASSWORD}@auth-db:5432/${AUTH_DB_NAME:-auth_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS:-10}
+    ports:
+      - "${AUTH_PORT:-3001}:3001"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/graphql',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query:'{__typename}'})}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [healthcare-net]
+
+  schedule-service:
+    build: ./schedule-service
+    environment:
+      PORT: 3002
+      DATABASE_URL: postgresql://${SCHEDULE_DB_USER:-postgres}:${SCHEDULE_DB_PASSWORD}@schedule-db:5432/${SCHEDULE_DB_NAME:-schedule_db}?schema=public
+      # Service-to-service call uses the internal docker network name
+      AUTH_SERVICE_URL: http://auth-service:3001/graphql
+    ports:
+      - "${SCHEDULE_PORT:-3002}:3002"
+    depends_on:
+      schedule-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks: [healthcare-net]
+
+networks:
+  healthcare-net:
+    driver: bridge
+
+volumes:
+  auth-db-data:
+  schedule-db-data:
